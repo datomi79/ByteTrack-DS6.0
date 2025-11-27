@@ -206,7 +206,17 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects) {
     this->lost_stracks.clear();
     this->lost_stracks.assign(resb.begin(), resb.end());
 
-    for (int i = 0; i < this->tracked_stracks.size(); i++) {
+    // FIX: Лимит для lost_stracks - предотвращает рост при 24/7 работе
+    const size_t MAX_LOST_STRACKS = 500;
+    if (this->lost_stracks.size() > MAX_LOST_STRACKS) {
+        size_t excess = this->lost_stracks.size() - MAX_LOST_STRACKS;
+        this->lost_stracks.erase(
+            this->lost_stracks.begin(),
+            this->lost_stracks.begin() + excess
+        );
+    }
+
+    for (size_t i = 0; i < this->tracked_stracks.size(); i++) {
         if (this->tracked_stracks[i].is_activated) {
             output_stracks.push_back(this->tracked_stracks[i]);
         }

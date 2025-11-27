@@ -234,9 +234,8 @@ double BYTETracker::lapjv(const vector <vector<float>> &cost, vector<int> &rowso
         n = n_rows;
     } else {
         if (!extend_cost) {
-            cout << "set extend_cost=True" << endl;
-            system("pause");
-            exit(0);
+            // Автоматически включаем extend_cost для неквадратных матриц
+            extend_cost = true;
         }
     }
 
@@ -299,9 +298,15 @@ double BYTETracker::lapjv(const vector <vector<float>> &cost, vector<int> &rowso
 
     int ret = lapjv_internal(n, cost_ptr, x_c, y_c);
     if (ret != 0) {
-        std::cout << "Calculate Wrong!" << endl;
-        system("pause");
-        exit(0);
+        std::cerr << "LAPJV calculation failed with code: " << ret << std::endl;
+        // Очистка памяти перед возвратом ошибки
+        for (int i = 0; i < n; i++) {
+            delete[] cost_ptr[i];
+        }
+        delete[] cost_ptr;
+        delete[] x_c;
+        delete[] y_c;
+        return -1.0;  // Код ошибки
     }
 
     double opt = 0.0;

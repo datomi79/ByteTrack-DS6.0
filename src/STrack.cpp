@@ -1,5 +1,8 @@
 #include "STrack.h"
 
+// Инициализация статического атомарного счётчика ID (потокобезопасно)
+std::atomic<int> STrack::_id_counter(0);
+
 STrack::STrack(vector<float> tlwh_, float score, int label, NvMOTObjToTrack *associatedObjectIn) {
     _tlwh.resize(4);
     _tlwh.assign(tlwh_.begin(), tlwh_.end());
@@ -163,9 +166,7 @@ void STrack::mark_removed() {
 }
 
 int STrack::next_id() {
-    static int _count = 0;
-    _count++;
-    return _count;
+    return ++_id_counter;  // Атомарный инкремент, потокобезопасно
 }
 
 int STrack::end_frame() {
@@ -173,7 +174,7 @@ int STrack::end_frame() {
 }
 
 void STrack::multi_predict(vector<STrack *> &stracks, byte_kalman::KalmanFilter &kalman_filter) {
-    for (int i = 0; i < stracks.size(); i++) {
+    for (size_t i = 0; i < stracks.size(); i++) {
         if (stracks[i]->state != TrackState::Tracked) {
             stracks[i]->mean[7] = 0;
         }

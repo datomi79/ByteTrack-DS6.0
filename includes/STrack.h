@@ -1,5 +1,6 @@
 #pragma once
 #include <nvdstracker.h>
+#include <atomic>
 #include "KalmanFilter.h"
 
 using namespace std;
@@ -60,4 +61,5 @@ public:
 
 private:
     byte_kalman::KalmanFilter kalman_filter;
+    static std::atomic<int> _id_counter;
 };
