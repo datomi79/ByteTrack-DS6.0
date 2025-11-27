@@ -1,11 +1,13 @@
 #include "BYTETracker.h"
 #include "Lapjv.h"
 #include "STrack.h"
+#include <unordered_set>
 
 vector<STrack *> BYTETracker::joint_stracks(vector<STrack *> &tlista, vector <STrack> &tlistb) {
     map<int, int> exists;
     vector < STrack * > res;
-    for (int i = 0; i < tlista.size(); i++) {
+    res.reserve(tlista.size() + tlistb.size());  // FIX: Pre-allocate
+    for (size_t i = 0; i < tlista.size(); i++) {
         exists.insert(pair<int, int>(tlista[i]->track_id, 1));
         res.push_back(tlista[i]);
     }
@@ -22,11 +24,12 @@ vector<STrack *> BYTETracker::joint_stracks(vector<STrack *> &tlista, vector <ST
 vector <STrack> BYTETracker::joint_stracks(vector <STrack> &tlista, vector <STrack> &tlistb) {
     std::map<int, int>   exists;
     vector <STrack> res;
-    for (int        i = 0; i < tlista.size(); i++) {
+    res.reserve(tlista.size() + tlistb.size());  // FIX: Pre-allocate
+    for (size_t     i = 0; i < tlista.size(); i++) {
         exists.insert(pair<int, int>(tlista[i].track_id, 1));
         res.push_back(tlista[i]);
     }
-    for (int        i = 0; i < tlistb.size(); i++) {
+    for (size_t     i = 0; i < tlistb.size(); i++) {
         int tid = tlistb[i].track_id;
         if (!exists[tid] || exists.count(tid) == 0) {
             exists[tid] = 1;
@@ -38,10 +41,10 @@ vector <STrack> BYTETracker::joint_stracks(vector <STrack> &tlista, vector <STra
 
 vector <STrack> BYTETracker::sub_stracks(vector <STrack> &tlista, vector <STrack> &tlistb) {
     map<int, STrack> stracks;
-    for (int         i = 0; i < tlista.size(); i++) {
+    for (size_t      i = 0; i < tlista.size(); i++) {
         stracks.insert(pair<int, STrack>(tlista[i].track_id, tlista[i]));
     }
-    for (int         i = 0; i < tlistb.size(); i++) {
+    for (size_t      i = 0; i < tlistb.size(); i++) {
         int tid = tlistb[i].track_id;
         if (stracks.count(tid) != 0) {
             stracks.erase(tid);
@@ -49,6 +52,7 @@ vector <STrack> BYTETracker::sub_stracks(vector <STrack> &tlista, vector <STrack
     }
 
     vector <STrack>                 res;
+    res.reserve(stracks.size());  // FIX: Pre-allocate
     std::map<int, STrack>::iterator it;
     for (it = stracks.begin(); it != stracks.end(); ++it) {
         res.push_back(it->second);
@@ -61,34 +65,36 @@ void BYTETracker::remove_duplicate_stracks(vector <STrack> &resa, vector <STrack
                                            vector <STrack> &stracksb) {
     vector <vector<float>>  pdist = iou_distance(stracksa, stracksb);
     vector <pair<int, int>> pairs;
-    for (int                i     = 0; i < pdist.size(); i++) {
-        for (int j = 0; j < pdist[i].size(); j++) {
+    for (size_t             i     = 0; i < pdist.size(); i++) {
+        for (size_t j = 0; j < pdist[i].size(); j++) {
             if (pdist[i][j] < 0.15) {
                 pairs.push_back(pair<int, int>(i, j));
             }
         }
     }
 
-    vector<int> dupa, dupb;
-    for (int    i                 = 0; i < pairs.size(); i++) {
+    // FIX: Use unordered_set for O(1) lookup instead of O(n) with vector::find
+    std::unordered_set<int> dupa, dupb;
+    for (size_t i = 0; i < pairs.size(); i++) {
         int timep = stracksa[pairs[i].first].frame_id - stracksa[pairs[i].first].start_frame;
         int timeq = stracksb[pairs[i].second].frame_id - stracksb[pairs[i].second].start_frame;
         if (timep > timeq)
-            dupb.push_back(pairs[i].second);
+            dupb.insert(pairs[i].second);
         else
-            dupa.push_back(pairs[i].first);
+            dupa.insert(pairs[i].first);
     }
 
-    for (int i = 0; i < stracksa.size(); i++) {
-        vector<int>::iterator iter = find(dupa.begin(), dupa.end(), i);
-        if (iter == dupa.end()) {
+    // FIX: O(1) lookup with unordered_set::count instead of O(n) with std::find
+    resa.reserve(stracksa.size());
+    for (size_t i = 0; i < stracksa.size(); i++) {
+        if (dupa.count(i) == 0) {
             resa.push_back(stracksa[i]);
         }
     }
 
-    for (int i = 0; i < stracksb.size(); i++) {
-        vector<int>::iterator iter = find(dupb.begin(), dupb.end(), i);
-        if (iter == dupb.end()) {
+    resb.reserve(stracksb.size());
+    for (size_t i = 0; i < stracksb.size(); i++) {
+        if (dupb.count(i) == 0) {
             resb.push_back(stracksb[i]);
         }
     }

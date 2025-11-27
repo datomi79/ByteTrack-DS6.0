@@ -32,6 +32,24 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects) {
     vector<STrack *> strack_pool;
     vector<STrack *> r_tracked_stracks;
 
+    // FIX: Pre-allocate vectors to avoid reallocations
+    const size_t num_objects = nvObjects.size();
+    const size_t num_tracked = this->tracked_stracks.size();
+    const size_t num_lost = this->lost_stracks.size();
+
+    detections.reserve(num_objects);
+    detections_low.reserve(num_objects);
+    detections_cp.reserve(num_objects);
+    activated_stracks.reserve(num_objects + num_tracked);
+    refind_stracks.reserve(num_lost);
+    lost_stracks.reserve(num_tracked);
+    removed_stracks.reserve(num_lost);
+    tracked_stracks_swap.reserve(num_tracked);
+    output_stracks.reserve(num_tracked + num_objects);
+    unconfirmed.reserve(num_tracked);
+    tracked_stracks.reserve(num_tracked);
+    strack_pool.reserve(num_tracked + num_lost);
+    r_tracked_stracks.reserve(num_tracked);
 
     if (nvObjects.size() > 0) {
         for (int i = 0; i < nvObjects.size(); i++) {

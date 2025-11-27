@@ -10,7 +10,9 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
     for (uint streamIdx = 0; streamIdx < pTrackedObjectsBatch->numFilled; streamIdx++){
         NvMOTTrackedObjList   *trackedObjList = &pTrackedObjectsBatch->list[streamIdx];
         NvMOTFrame            *frame          = &params->frameList[streamIdx];
-        std::vector<NvObject> nvObjects(frame->objectsIn.numFilled);
+        // FIX: reserve() instead of size constructor to avoid duplicating elements with push_back
+        std::vector<NvObject> nvObjects;
+        nvObjects.reserve(frame->objectsIn.numFilled);
         for (uint32_t numObjects = 0; numObjects < frame->objectsIn.numFilled; numObjects++) {
             NvMOTObjToTrack *objectToTrack = &frame->objectsIn.list[numObjects];
             NvObject nvObject;
