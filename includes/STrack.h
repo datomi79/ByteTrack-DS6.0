@@ -23,9 +23,9 @@ public:
 
     void static_tlbr();
 
-    vector<float> tlwh_to_xyah(vector<float> tlwh_tmp);
+    vector<float> tlwh_to_xyah(const vector<float> &tlwh_tmp) const;
 
-    vector<float> to_xyah();
+    vector<float> to_xyah() const;
 
     void mark_lost();
 
@@ -33,7 +33,7 @@ public:
 
     int next_id();
 
-    int end_frame();
+    int end_frame() const;
 
     void activate(byte_kalman::KalmanFilter &kalman_filter, int frame_id);
 

@@ -7,6 +7,11 @@ NvMOTContext::NvMOTContext(const NvMOTConfig &configIn, NvMOTConfigResponse &con
 }
 
 NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTrackedObjBatch *pTrackedObjectsBatch) {
+    // FIX: Null checks for safety
+    if (!params || !pTrackedObjectsBatch || !pTrackedObjectsBatch->list || !params->frameList) {
+        return NvMOTStatus_Error;
+    }
+
     for (uint streamIdx = 0; streamIdx < pTrackedObjectsBatch->numFilled; streamIdx++){
         NvMOTTrackedObjList   *trackedObjList = &pTrackedObjectsBatch->list[streamIdx];
         NvMOTFrame            *frame          = &params->frameList[streamIdx];
@@ -56,7 +61,10 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
             trackedObj->confidence = 1;
             trackedObj->age = (uint32_t) sTrack.tracklet_len;
             trackedObj->associatedObjectIn = sTrack.associatedObjectIn;
-            trackedObj->associatedObjectIn->doTracking = true;
+            // FIX: Null check before dereference
+            if (trackedObj->associatedObjectIn) {
+                trackedObj->associatedObjectIn->doTracking = true;
+            }
             filled++;
         }
 

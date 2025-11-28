@@ -30,23 +30,26 @@ STrack::~STrack() {
 }
 
 void STrack::activate(byte_kalman::KalmanFilter &kalman_filter, int frame_id) {
-    this->kalman_filter = kalman_filter;
-    this->track_id      = this->next_id();
+    // FIX: Safety check - ensure _tlwh has required size
+    if (this->_tlwh.size() < 4) {
+        return;  // Invalid state, don't activate
+    }
 
-    vector<float> _tlwh_tmp(4);
-    _tlwh_tmp[0] = this->_tlwh[0];
-    _tlwh_tmp[1] = this->_tlwh[1];
-    _tlwh_tmp[2] = this->_tlwh[2];
-    _tlwh_tmp[3] = this->_tlwh[3];
-    vector<float> xyah = tlwh_to_xyah(_tlwh_tmp);
+    // FIX: Do Kalman initialization first (may throw), then update state
+    vector<float> xyah = tlwh_to_xyah(this->_tlwh);
     DETECTBOX     xyah_box;
     xyah_box[0] = xyah[0];
     xyah_box[1] = xyah[1];
     xyah_box[2] = xyah[2];
     xyah_box[3] = xyah[3];
+
+    this->kalman_filter = kalman_filter;
     auto mc = this->kalman_filter.initiate(xyah_box);
+
+    // FIX: Only update object state after successful Kalman init
     this->mean       = mc.first;
     this->covariance = mc.second;
+    this->track_id   = this->next_id();
 
     static_tlwh();
     static_tlbr();
@@ -56,7 +59,6 @@ void STrack::activate(byte_kalman::KalmanFilter &kalman_filter, int frame_id) {
     if (frame_id == 1) {
         this->is_activated = true;
     }
-    //this->is_activated = true;
     this->frame_id     = frame_id;
     this->start_frame  = frame_id;
 }
@@ -139,7 +141,7 @@ void STrack::static_tlbr() {
     tlbr[3] += tlbr[1];
 }
 
-vector<float> STrack::tlwh_to_xyah(vector<float> tlwh_tmp) {
+vector<float> STrack::tlwh_to_xyah(const vector<float> &tlwh_tmp) const {
     vector<float> tlwh_output = tlwh_tmp;
     tlwh_output[0] += tlwh_output[2] / 2;
     tlwh_output[1] += tlwh_output[3] / 2;
@@ -147,7 +149,7 @@ vector<float> STrack::tlwh_to_xyah(vector<float> tlwh_tmp) {
     return tlwh_output;
 }
 
-vector<float> STrack::to_xyah() {
+vector<float> STrack::to_xyah() const {
     return tlwh_to_xyah(tlwh);
 }
 
@@ -169,7 +171,7 @@ int STrack::next_id() {
     return ++_id_counter;  // Атомарный инкремент, потокобезопасно
 }
 
-int STrack::end_frame() {
+int STrack::end_frame() const {
     return this->frame_id;
 }
 

@@ -11,7 +11,7 @@ vector<STrack *> BYTETracker::joint_stracks(vector<STrack *> &tlista, vector <ST
         exists.insert(pair<int, int>(tlista[i]->track_id, 1));
         res.push_back(tlista[i]);
     }
-    for (int i = 0; i < tlistb.size(); i++) {
+    for (size_t i = 0; i < tlistb.size(); i++) {
         int tid = tlistb[i].track_id;
         if (!exists[tid] || exists.count(tid) == 0) {
             exists[tid] = 1;
@@ -117,7 +117,8 @@ BYTETracker::linear_assignment(vector <vector<float>> &cost_matrix, int cost_mat
     vector<int> rowsol;
     vector<int> colsol;
     float       c = lapjv(cost_matrix, rowsol, colsol, true, thresh);
-    for (int    i = 0; i < rowsol.size(); i++) {
+    (void)c;  // Unused but kept for API compatibility
+    for (size_t i = 0; i < rowsol.size(); i++) {
         if (rowsol[i] >= 0) {
             vector<int> match;
             match.push_back(i);
@@ -128,7 +129,7 @@ BYTETracker::linear_assignment(vector <vector<float>> &cost_matrix, int cost_mat
         }
     }
 
-    for (int i = 0; i < colsol.size(); i++) {
+    for (size_t i = 0; i < colsol.size(); i++) {
         if (colsol[i] < 0) {
             unmatched_b.push_back(i);
         }
@@ -141,15 +142,15 @@ vector <vector<float>> BYTETracker::ious(vector <vector<float>> &atlbrs, vector 
         return ious;
 
     ious.resize(atlbrs.size());
-    for (int i = 0; i < ious.size(); i++) {
+    for (size_t i = 0; i < ious.size(); i++) {
         ious[i].resize(btlbrs.size());
     }
 
     //bbox_ious
-    for (int k = 0; k < btlbrs.size(); k++) {
+    for (size_t k = 0; k < btlbrs.size(); k++) {
         vector<float> ious_tmp;
         float         box_area = (btlbrs[k][2] - btlbrs[k][0] + 1) * (btlbrs[k][3] - btlbrs[k][1] + 1);
-        for (int      n        = 0; n < atlbrs.size(); n++) {
+        for (size_t   n        = 0; n < atlbrs.size(); n++) {
             float iw = min(atlbrs[n][2], btlbrs[k][2]) - max(atlbrs[n][0], btlbrs[k][0]) + 1;
             if (iw > 0) {
                 float ih = min(atlbrs[n][3], btlbrs[k][3]) - max(atlbrs[n][1], btlbrs[k][1]) + 1;
@@ -178,10 +179,10 @@ BYTETracker::iou_distance(vector<STrack *> &atracks, vector <STrack> &btracks, i
         return cost_matrix;
     }
     vector <vector<float>> atlbrs, btlbrs;
-    for (int               i = 0; i < atracks.size(); i++) {
+    for (size_t            i = 0; i < atracks.size(); i++) {
         atlbrs.push_back(atracks[i]->tlbr);
     }
-    for (int               i = 0; i < btracks.size(); i++) {
+    for (size_t            i = 0; i < btracks.size(); i++) {
         btlbrs.push_back(btracks[i].tlbr);
     }
 
@@ -190,9 +191,9 @@ BYTETracker::iou_distance(vector<STrack *> &atracks, vector <STrack> &btracks, i
 
     vector <vector<float>> _ious = ious(atlbrs, btlbrs);
 
-    for (int i = 0; i < _ious.size(); i++) {
+    for (size_t i = 0; i < _ious.size(); i++) {
         vector<float> _iou;
-        for (int      j = 0; j < _ious[i].size(); j++) {
+        for (size_t   j = 0; j < _ious[i].size(); j++) {
             _iou.push_back(1 - _ious[i][j]);
         }
         cost_matrix.push_back(_iou);
@@ -203,18 +204,18 @@ BYTETracker::iou_distance(vector<STrack *> &atracks, vector <STrack> &btracks, i
 
 vector <vector<float>> BYTETracker::iou_distance(vector <STrack> &atracks, vector <STrack> &btracks) {
     vector <vector<float>> atlbrs, btlbrs;
-    for (int               i = 0; i < atracks.size(); i++) {
+    for (size_t            i = 0; i < atracks.size(); i++) {
         atlbrs.push_back(atracks[i].tlbr);
     }
-    for (int               i = 0; i < btracks.size(); i++) {
+    for (size_t            i = 0; i < btracks.size(); i++) {
         btlbrs.push_back(btracks[i].tlbr);
     }
 
     vector <vector<float>> _ious = ious(atlbrs, btlbrs);
     vector <vector<float>> cost_matrix;
-    for (int               i     = 0; i < _ious.size(); i++) {
+    for (size_t            i     = 0; i < _ious.size(); i++) {
         vector<float> _iou;
-        for (int      j = 0; j < _ious[i].size(); j++) {
+        for (size_t   j = 0; j < _ious[i].size(); j++) {
             _iou.push_back(1 - _ious[i][j]);
         }
         cost_matrix.push_back(_iou);
@@ -248,33 +249,33 @@ double BYTETracker::lapjv(const vector <vector<float>> &cost, vector<int> &rowso
     if (extend_cost || cost_limit < LONG_MAX) {
         n = n_rows + n_cols;
         cost_c_extended.resize(n);
-        for (int i = 0; i < cost_c_extended.size(); i++)
+        for (size_t i = 0; i < cost_c_extended.size(); i++)
             cost_c_extended[i].resize(n);
 
         if (cost_limit < LONG_MAX) {
-            for (int i = 0; i < cost_c_extended.size(); i++) {
-                for (int j = 0; j < cost_c_extended[i].size(); j++) {
+            for (size_t i = 0; i < cost_c_extended.size(); i++) {
+                for (size_t j = 0; j < cost_c_extended[i].size(); j++) {
                     cost_c_extended[i][j] = cost_limit / 2.0;
                 }
             }
         } else {
             float cost_max = -1;
 
-            for (int i = 0; i < cost_c.size(); i++) {
-                for (int j = 0; j < cost_c[i].size(); j++) {
+            for (size_t i = 0; i < cost_c.size(); i++) {
+                for (size_t j = 0; j < cost_c[i].size(); j++) {
                     if (cost_c[i][j] > cost_max)
                         cost_max = cost_c[i][j];
                 }
             }
-            for (int i = 0; i < cost_c_extended.size(); i++) {
-                for (int j = 0; j < cost_c_extended[i].size(); j++) {
+            for (size_t i = 0; i < cost_c_extended.size(); i++) {
+                for (size_t j = 0; j < cost_c_extended[i].size(); j++) {
                     cost_c_extended[i][j] = cost_max + 1;
                 }
             }
         }
 
-        for (int i = n_rows; i < cost_c_extended.size(); i++) {
-            for (int j = n_cols; j < cost_c_extended[i].size(); j++) {
+        for (size_t i = static_cast<size_t>(n_rows); i < cost_c_extended.size(); i++) {
+            for (size_t j = static_cast<size_t>(n_cols); j < cost_c_extended[i].size(); j++) {
                 cost_c_extended[i][j] = 0;
             }
         }

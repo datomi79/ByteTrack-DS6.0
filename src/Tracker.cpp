@@ -35,23 +35,32 @@ NvMOTStatus NvMOT_Query(uint16_t customConfigFilePathSize,
 NvMOTStatus NvMOT_Init(NvMOTConfig *pConfigIn,
                        NvMOTContextHandle *pContextHandle,
                        NvMOTConfigResponse *pConfigResponse) {
-    if (pContextHandle != nullptr) {
+    // FIX: Null checks for input parameters
+    if (!pConfigIn || !pContextHandle || !pConfigResponse) {
+        return NvMOTStatus_Error;
+    }
+
+    if (*pContextHandle != nullptr) {
         NvMOT_DeInit(*pContextHandle);
     }
 
-    /// User-defined class for the context
-    NvMOTContext *pContext = nullptr;
+    // FIX: try-catch around new to handle allocation failure
+    try {
+        /// User-defined class for the context
+        NvMOTContext *pContext = new NvMOTContext(*pConfigIn, *pConfigResponse);
 
-    /// Instantiate the user-defined context
-    pContext = new NvMOTContext(*pConfigIn, *pConfigResponse);
+        /// Pass the pointer as the context handle
+        *pContextHandle = pContext;
+    } catch (const std::bad_alloc &e) {
+        std::cerr << "NvMOT_Init: Memory allocation failed: " << e.what() << std::endl;
+        *pContextHandle = nullptr;
+        return NvMOTStatus_Error;
+    } catch (const std::exception &e) {
+        std::cerr << "NvMOT_Init: Exception: " << e.what() << std::endl;
+        *pContextHandle = nullptr;
+        return NvMOTStatus_Error;
+    }
 
-    /// Pass the pointer as the context handle
-    *pContextHandle = pContext;
-
-    /**
-     * return NvMOTStatus_Error if something is wrong
-     * return NvMOTStatus_OK if everything went well
-     */
     return NvMOTStatus_OK;
 }
 
@@ -63,11 +72,18 @@ void NvMOT_DeInit(NvMOTContextHandle contextHandle) {
 NvMOTStatus NvMOT_Process(NvMOTContextHandle contextHandle,
                           NvMOTProcessParams *pParams,
                           NvMOTTrackedObjBatch *pTrackedObjectsBatch) {
+    // FIX: Null check for contextHandle
+    if (!contextHandle) {
+        return NvMOTStatus_Error;
+    }
     /// Process the given video frame using the user-defined method in the context, and generate outputs
-    contextHandle->processFrame(pParams, pTrackedObjectsBatch);
-    return NvMOTStatus_OK;
+    return contextHandle->processFrame(pParams, pTrackedObjectsBatch);
 }
 
 NvMOTStatus NvMOT_RemoveStreams(NvMOTContextHandle contextHandle, NvMOTStreamId streamIdMask) {
-    return contextHandle -> removeStream(streamIdMask);
+    // FIX: Null check for contextHandle
+    if (!contextHandle) {
+        return NvMOTStatus_Error;
+    }
+    return contextHandle->removeStream(streamIdMask);
 }
