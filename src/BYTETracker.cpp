@@ -1,5 +1,8 @@
 #include "BYTETracker.h"
 
+// Uncomment to enable memory diagnostics
+// #define BYTETRACK_DEBUG_MEMORY
+
 BYTETracker::BYTETracker(int frame_rate, int track_buffer) {
     track_thresh  = 0;
     high_thresh   = 0.2;
@@ -202,20 +205,13 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects) {
         this->lost_stracks.push_back(lost_stracks[i]);
     }
 
-    this->lost_stracks = sub_stracks(this->lost_stracks, this->removed_stracks);
-    for (size_t i = 0; i < removed_stracks.size(); i++) {
-        this->removed_stracks.push_back(removed_stracks[i]);
-    }
+    // FIX: Don't accumulate removed_stracks - just use local removed_stracks for this frame
+    // sub_stracks removes tracks from lost_stracks that are in removed_stracks
+    this->lost_stracks = sub_stracks(this->lost_stracks, removed_stracks);
 
-    // FIX: Clean up old removed_stracks to prevent unbounded growth
-    const size_t MAX_REMOVED_STRACKS = 1000;
-    if (this->removed_stracks.size() > MAX_REMOVED_STRACKS) {
-        size_t excess = this->removed_stracks.size() - MAX_REMOVED_STRACKS;
-        this->removed_stracks.erase(
-            this->removed_stracks.begin(),
-            this->removed_stracks.begin() + excess
-        );
-    }
+    // FIX: Clear removed_stracks each frame - no need to persist, tracks are already removed
+    this->removed_stracks.clear();
+    this->removed_stracks.shrink_to_fit();  // Release memory back to OS
 
     remove_duplicate_stracks(resa, resb, this->tracked_stracks, this->lost_stracks);
 
@@ -224,14 +220,26 @@ vector<STrack> BYTETracker::update(const vector<NvObject> &nvObjects) {
     this->lost_stracks.clear();
     this->lost_stracks.assign(resb.begin(), resb.end());
 
-    // FIX: Лимит для lost_stracks - предотвращает рост при 24/7 работе
-    const size_t MAX_LOST_STRACKS = 500;
+    // FIX: Более агрессивный лимит для lost_stracks
+    const size_t MAX_LOST_STRACKS = 100;  // Reduced from 500
     if (this->lost_stracks.size() > MAX_LOST_STRACKS) {
         size_t excess = this->lost_stracks.size() - MAX_LOST_STRACKS;
         this->lost_stracks.erase(
             this->lost_stracks.begin(),
             this->lost_stracks.begin() + excess
         );
+    }
+
+    // FIX: Периодически освобождаем память (каждые 1000 кадров)
+    if (this->frame_id % 1000 == 0) {
+        this->tracked_stracks.shrink_to_fit();
+        this->lost_stracks.shrink_to_fit();
+#ifdef BYTETRACK_DEBUG_MEMORY
+        std::cout << "[ByteTrack] Frame " << this->frame_id
+                  << " | tracked: " << this->tracked_stracks.size()
+                  << " | lost: " << this->lost_stracks.size()
+                  << " | STrack size: " << sizeof(STrack) << " bytes" << std::endl;
+#endif
     }
 
     for (size_t i = 0; i < this->tracked_stracks.size(); i++) {
