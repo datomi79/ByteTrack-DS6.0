@@ -31,12 +31,18 @@ NvMOTStatus NvMOTContext::processFrame(const NvMOTProcessParams *params, NvMOTTr
             nvObjects.push_back(nvObject);
         }
 
-        // Single-stream: create tracker on first use
-        if (!byteTracker) {
-            byteTracker = std::make_shared<BYTETracker>(15, 30);
+        // Multi-stream: create tracker per stream ID on first use
+        if (byteTrackerMap.find(frame->streamID) == byteTrackerMap.end()) {
+            std::cout << "[ByteTrack] Creating tracker for stream: " << frame->streamID << std::endl;
+            byteTrackerMap.insert(
+                std::pair<uint64_t, std::shared_ptr<BYTETracker>>(
+                    frame->streamID,
+                    std::make_shared<BYTETracker>(15, 30)
+                )
+            );
         }
 
-        std::vector<STrack> outputTracks = byteTracker->update(nvObjects);
+        std::vector<STrack> outputTracks = byteTrackerMap.at(frame->streamID)->update(nvObjects);
 
         // FIX: Reuse existing buffer instead of allocating new one each frame
         if (trackedObjList->numAllocated != MAX_TARGETS_PER_STREAM) {
@@ -82,7 +88,9 @@ NvMOTStatus NvMOTContext::processFramePast(const NvMOTProcessParams *params,
 }
 
 NvMOTStatus NvMOTContext::removeStream(const NvMOTStreamId streamIdMask) {
-    std::cout << "Removing tracker for stream: " << streamIdMask << std::endl;
-    byteTracker.reset();
+    if (byteTrackerMap.find(streamIdMask) != byteTrackerMap.end()) {
+        std::cout << "Removing tracker for stream: " << streamIdMask << std::endl;
+        byteTrackerMap.erase(streamIdMask);
+    }
     return NvMOTStatus_OK;
 }

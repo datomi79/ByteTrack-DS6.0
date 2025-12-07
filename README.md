@@ -1,12 +1,13 @@
-# ByteTrack Integration with DeepStream 6.0 (Memory Leak Fixed)
+# ByteTrack Integration with DeepStream 6.x (Multi-Stream with Global Track IDs)
 
-This is a fixed version of ByteTrack for DeepStream 6.0 with all memory leaks resolved.
+This is an enhanced version of ByteTrack for DeepStream 6.x with memory leak fixes and multi-camera support.
 
 ## Features
-- Compatible with DeepStream 6.0
+- Compatible with DeepStream 6.0 and newer versions
+- **Multi-stream support** with independent tracking per camera
+- **Global track IDs** across all streams (thread-safe atomic counter)
 - **Memory leak fixes** from the original implementation
-- Simplified for single-stream operation
-- Based on patterns from ByteTrack-DS6.4
+- Based on multi-stream architecture from ByteTrack-DS6.4
 
 ## Memory Leak Fixes Applied
 
@@ -19,6 +20,24 @@ This is a fixed version of ByteTrack for DeepStream 6.0 with all memory leaks re
 
 3. **BYTETracker::update()** - Added cleanup for removed_stracks
    - Prevents unbounded growth of removed tracks vector
+
+## Multi-Stream Architecture
+
+Each camera stream gets its own independent BYTETracker instance:
+- Automatic tracker creation per stream ID on first frame
+- Track IDs are globally unique across all streams (atomic counter)
+- Independent tracking state per camera (no cross-stream matching)
+- Automatic cleanup when stream is removed
+
+**Stream Lifecycle:**
+1. New stream detected → Creates dedicated BYTETracker instance
+2. Each frame processed independently per stream
+3. Stream removed → Tracker automatically cleaned up
+
+**Global Track IDs:**
+- Uses thread-safe `std::atomic<int>` counter
+- Ensures no ID collisions between streams
+- Monotonically increasing across all cameras
 
 ## Build Instructions
 ```bash

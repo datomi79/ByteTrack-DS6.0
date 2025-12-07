@@ -8,6 +8,7 @@
 #include "nvdstracker.h"
 #include "BYTETracker.h"
 #include <memory>
+#include <map>
 
 #define MAX_TARGETS_PER_STREAM 512
 
@@ -57,9 +58,10 @@ public:
 
 protected:
     /**
-     * Single-stream tracker instance (simplified from multi-stream map)
+     * Multi-stream tracker map: one BYTETracker instance per stream ID
+     * Track IDs are globally unique across all streams via atomic counter
      */
-    std::shared_ptr<BYTETracker> byteTracker;
+    std::map<uint64_t, std::shared_ptr<BYTETracker>> byteTrackerMap;
 };
 
 #endif //DNSTARPROD_TRACKER_H
