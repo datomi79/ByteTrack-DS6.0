@@ -83,8 +83,8 @@ void STrack::re_activate(STrack &new_track, int frame_id, bool new_id) {
     this->frame_id           = frame_id;
     this->score              = new_track.score;
     this->associatedObjectIn = new_track.associatedObjectIn;
-    this->original_tlwh.resize(4);
-    this->original_tlwh.assign(new_track.original_tlwh.begin(), new_track.original_tlwh.end());
+    // FIX: Direct assignment instead of resize+assign
+    this->original_tlwh = new_track.original_tlwh;
     if (new_id)
         this->track_id = next_id();
 }
@@ -111,8 +111,8 @@ void STrack::update(STrack &new_track, int frame_id) {
     this->is_activated       = true;
     this->score              = new_track.score;
     this->associatedObjectIn = new_track.associatedObjectIn;
-    this->original_tlwh.resize(4);
-    this->original_tlwh.assign(new_track.original_tlwh.begin(), new_track.original_tlwh.end());
+    // FIX: Direct assignment instead of resize+assign
+    this->original_tlwh = new_track.original_tlwh;
 }
 
 void STrack::static_tlwh() {
@@ -135,10 +135,11 @@ void STrack::static_tlwh() {
 }
 
 void STrack::static_tlbr() {
-    tlbr.clear();
-    tlbr.assign(tlwh.begin(), tlwh.end());
-    tlbr[2] += tlbr[0];
-    tlbr[3] += tlbr[1];
+    // FIX: Avoid clear/assign, compute directly
+    tlbr[0] = tlwh[0];
+    tlbr[1] = tlwh[1];
+    tlbr[2] = tlwh[0] + tlwh[2];
+    tlbr[3] = tlwh[1] + tlwh[3];
 }
 
 vector<float> STrack::tlwh_to_xyah(const vector<float> &tlwh_tmp) const {

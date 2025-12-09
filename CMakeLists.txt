@@ -17,7 +17,8 @@ include_directories(${CMAKE_SOURCE_DIR}/includes)
 
 file(GLOB TRACK ${CMAKE_SOURCE_DIR}/src/*.cpp)
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -fPIC")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -fPIC -O3 -march=native -ffast-math -DNDEBUG -DEIGEN_NO_DEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ffast-math -DNDEBUG -DEIGEN_NO_DEBUG")
 set(CMAKE_CUDA_FLAGS "--compiler-options -fPIC")
 
 link_directories(${DS_LIBS_DIR})

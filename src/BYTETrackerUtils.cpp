@@ -4,17 +4,19 @@
 #include <unordered_set>
 
 vector<STrack *> BYTETracker::joint_stracks(vector<STrack *> &tlista, vector <STrack> &tlistb) {
-    map<int, int> exists;
-    vector < STrack * > res;
-    res.reserve(tlista.size() + tlistb.size());  // FIX: Pre-allocate
+    // FIX: Use unordered_set for O(1) lookup instead of map O(log n)
+    std::unordered_set<int> exists;
+    exists.reserve(tlista.size() + tlistb.size());
+    vector<STrack *> res;
+    res.reserve(tlista.size() + tlistb.size());
     for (size_t i = 0; i < tlista.size(); i++) {
-        exists.insert(pair<int, int>(tlista[i]->track_id, 1));
+        exists.insert(tlista[i]->track_id);
         res.push_back(tlista[i]);
     }
     for (size_t i = 0; i < tlistb.size(); i++) {
         int tid = tlistb[i].track_id;
-        if (!exists[tid] || exists.count(tid) == 0) {
-            exists[tid] = 1;
+        if (exists.find(tid) == exists.end()) {
+            exists.insert(tid);
             res.push_back(&tlistb[i]);
         }
     }
@@ -22,17 +24,19 @@ vector<STrack *> BYTETracker::joint_stracks(vector<STrack *> &tlista, vector <ST
 }
 
 vector <STrack> BYTETracker::joint_stracks(vector <STrack> &tlista, vector <STrack> &tlistb) {
-    std::map<int, int>   exists;
-    vector <STrack> res;
-    res.reserve(tlista.size() + tlistb.size());  // FIX: Pre-allocate
-    for (size_t     i = 0; i < tlista.size(); i++) {
-        exists.insert(pair<int, int>(tlista[i].track_id, 1));
+    // FIX: Use unordered_set for O(1) lookup instead of map O(log n)
+    std::unordered_set<int> exists;
+    exists.reserve(tlista.size() + tlistb.size());
+    vector<STrack> res;
+    res.reserve(tlista.size() + tlistb.size());
+    for (size_t i = 0; i < tlista.size(); i++) {
+        exists.insert(tlista[i].track_id);
         res.push_back(tlista[i]);
     }
-    for (size_t     i = 0; i < tlistb.size(); i++) {
+    for (size_t i = 0; i < tlistb.size(); i++) {
         int tid = tlistb[i].track_id;
-        if (!exists[tid] || exists.count(tid) == 0) {
-            exists[tid] = 1;
+        if (exists.find(tid) == exists.end()) {
+            exists.insert(tid);
             res.push_back(tlistb[i]);
         }
     }
@@ -40,24 +44,20 @@ vector <STrack> BYTETracker::joint_stracks(vector <STrack> &tlista, vector <STra
 }
 
 vector <STrack> BYTETracker::sub_stracks(vector <STrack> &tlista, vector <STrack> &tlistb) {
-    map<int, STrack> stracks;
-    for (size_t      i = 0; i < tlista.size(); i++) {
-        stracks.insert(pair<int, STrack>(tlista[i].track_id, tlista[i]));
+    // FIX: Avoid copying STrack into map - use unordered_set of IDs to remove
+    std::unordered_set<int> ids_to_remove;
+    ids_to_remove.reserve(tlistb.size());
+    for (size_t i = 0; i < tlistb.size(); i++) {
+        ids_to_remove.insert(tlistb[i].track_id);
     }
-    for (size_t      i = 0; i < tlistb.size(); i++) {
-        int tid = tlistb[i].track_id;
-        if (stracks.count(tid) != 0) {
-            stracks.erase(tid);
+
+    vector<STrack> res;
+    res.reserve(tlista.size());
+    for (size_t i = 0; i < tlista.size(); i++) {
+        if (ids_to_remove.find(tlista[i].track_id) == ids_to_remove.end()) {
+            res.push_back(tlista[i]);
         }
     }
-
-    vector <STrack>                 res;
-    res.reserve(stracks.size());  // FIX: Pre-allocate
-    std::map<int, STrack>::iterator it;
-    for (it = stracks.begin(); it != stracks.end(); ++it) {
-        res.push_back(it->second);
-    }
-
     return res;
 }
 
@@ -148,8 +148,7 @@ vector <vector<float>> BYTETracker::ious(vector <vector<float>> &atlbrs, vector 
 
     //bbox_ious
     for (size_t k = 0; k < btlbrs.size(); k++) {
-        vector<float> ious_tmp;
-        float         box_area = (btlbrs[k][2] - btlbrs[k][0] + 1) * (btlbrs[k][3] - btlbrs[k][1] + 1);
+        float box_area = (btlbrs[k][2] - btlbrs[k][0] + 1) * (btlbrs[k][3] - btlbrs[k][1] + 1);
         for (size_t   n        = 0; n < atlbrs.size(); n++) {
             float iw = min(atlbrs[n][2], btlbrs[k][2]) - max(atlbrs[n][0], btlbrs[k][0]) + 1;
             if (iw > 0) {
@@ -178,22 +177,29 @@ BYTETracker::iou_distance(vector<STrack *> &atracks, vector <STrack> &btracks, i
         dist_size_size = btracks.size();
         return cost_matrix;
     }
-    vector <vector<float>> atlbrs, btlbrs;
-    for (size_t            i = 0; i < atracks.size(); i++) {
+    // FIX: Pre-allocate vectors
+    vector<vector<float>> atlbrs, btlbrs;
+    atlbrs.reserve(atracks.size());
+    btlbrs.reserve(btracks.size());
+    for (size_t i = 0; i < atracks.size(); i++) {
         atlbrs.push_back(atracks[i]->tlbr);
     }
-    for (size_t            i = 0; i < btracks.size(); i++) {
+    for (size_t i = 0; i < btracks.size(); i++) {
         btlbrs.push_back(btracks[i].tlbr);
     }
 
     dist_size      = atracks.size();
     dist_size_size = btracks.size();
 
-    vector <vector<float>> _ious = ious(atlbrs, btlbrs);
+    vector<vector<float>> _ious = ious(atlbrs, btlbrs);
 
+    // FIX: Pre-allocate cost_matrix
+    vector<vector<float>> cost_matrix;
+    cost_matrix.reserve(_ious.size());
     for (size_t i = 0; i < _ious.size(); i++) {
         vector<float> _iou;
-        for (size_t   j = 0; j < _ious[i].size(); j++) {
+        _iou.reserve(_ious[i].size());
+        for (size_t j = 0; j < _ious[i].size(); j++) {
             _iou.push_back(1 - _ious[i][j]);
         }
         cost_matrix.push_back(_iou);
@@ -202,20 +208,27 @@ BYTETracker::iou_distance(vector<STrack *> &atracks, vector <STrack> &btracks, i
     return cost_matrix;
 }
 
-vector <vector<float>> BYTETracker::iou_distance(vector <STrack> &atracks, vector <STrack> &btracks) {
-    vector <vector<float>> atlbrs, btlbrs;
-    for (size_t            i = 0; i < atracks.size(); i++) {
+vector<vector<float>> BYTETracker::iou_distance(vector<STrack> &atracks, vector<STrack> &btracks) {
+    // FIX: Pre-allocate vectors
+    vector<vector<float>> atlbrs, btlbrs;
+    atlbrs.reserve(atracks.size());
+    btlbrs.reserve(btracks.size());
+    for (size_t i = 0; i < atracks.size(); i++) {
         atlbrs.push_back(atracks[i].tlbr);
     }
-    for (size_t            i = 0; i < btracks.size(); i++) {
+    for (size_t i = 0; i < btracks.size(); i++) {
         btlbrs.push_back(btracks[i].tlbr);
     }
 
-    vector <vector<float>> _ious = ious(atlbrs, btlbrs);
-    vector <vector<float>> cost_matrix;
-    for (size_t            i     = 0; i < _ious.size(); i++) {
+    vector<vector<float>> _ious = ious(atlbrs, btlbrs);
+
+    // FIX: Pre-allocate cost_matrix
+    vector<vector<float>> cost_matrix;
+    cost_matrix.reserve(_ious.size());
+    for (size_t i = 0; i < _ious.size(); i++) {
         vector<float> _iou;
-        for (size_t   j = 0; j < _ious[i].size(); j++) {
+        _iou.reserve(_ious[i].size());
+        for (size_t j = 0; j < _ious[i].size(); j++) {
             _iou.push_back(1 - _ious[i][j]);
         }
         cost_matrix.push_back(_iou);
